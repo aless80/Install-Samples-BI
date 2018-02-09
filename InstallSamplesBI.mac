@@ -1,0 +1,199 @@
+ROUTINE InstallSamplesBI
+/// This routine install the Intersystems github repositories Samples-BI and Samples-Analytics-Clients. 
+/// <var>ns</var> is the namespace (default SAMPLES). If namespace does not exist it will be created 
+/// together with the webapp, unjournaled databases, and a temporary SSLConfigs. The repositories will 
+/// be downloaded as .zip files to /mgr/ and this method will try to exptract them. The zip file and 
+/// and its content will be deleted after the installation. 
+/// Because the unzipping command is OS dependent, the user can pass a command to <var>tUnzipCommand</var>. 
+/// If empty this script will try using "jar.exe xf" or "unzip -o" in Windows/Unix, or start a dialog with 
+/// the user. 
+InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "") 
+{
+	zn "%SYS"
+	Set tItem = $zu(28,ns,5)
+	Set tMgrDir = ##class(%File).ManagerDirectory()
+	//Check if the namespace already exists. If not create DB and ns in a new directory
+	///Assume the DB has the same name as the ns (eg SAMPLES)
+	If '##Class(Config.Namespaces).Exists(tItem) {
+		//Create a directory for the database in /mgr/
+		If '##Class(Config.Databases).Exists(tItem) {
+  			Set tDir = ##class(%File).SubDirectoryName(tMgrDir,$ZCVT(tItem,"l"))
+  			If '##class(%File).DirectoryExists(tDir) {
+	   			Write !,"  * Creating Directory "_tDir
+	   			Do ##class(%File).CreateDirectory(tDir)    		
+  			}
+  			//Creating Database
+  			Write !,"  * Creating Database: "_tItem_" in "_tDir
+  			Set tSC = $$CreateDatabase^%SYS.DATABASE(tDir)
+  			Quit:'(tSC) "ERROR: Failed to create database: "_$system.Status.GetErrorText(tSC)
+  			Kill p
+  			Set p("Directory")=tDir
+  			Set p("MountAtStartup")=1
+  			Set p("GlobalJournalState")=2
+  			Set p("GlobalJournalState")=2
+  			Set p("ResourceName") = "%DB_%DEFAULT" //In cache' it used to be %DB_SAMPLES
+  			Set tSC=##Class(Config.Databases).Create(tItem,.p)
+    		Quit:'(tSC) "ERROR: Failed to add database: "_$system.Status.GetErrorText(tSC)
+		
+			//Create the namespace
+	 		Write !,"  * Creating Namespace "_tItem
+	 		Kill p  Set p("Globals")=tItem
+  			Set tSC=##Class(Config.Namespaces).Create(tItem,.p)  			
+	 		Quit:'(tSC) "ERROR: Failed to create namespace: "_$system.Status.GetErrorText(tSC)
+	 	}
+	 }
+	///Create a web application. 
+	///Assume webapp is (when choosing SAMPLES) /csp/samples in /mgr/csp/samples/ directory
+	Set webapp = "/csp/"_$zcvt(tItem,"L") 				//eg /csp/samples
+	If '##class(Security.Applications).Exists(webapp) {	//eg <install>/mgr/csp/samples/
+		Set path = $System.Util.InstallDirectory()_webapp_"/"
+		Write !,"  * Creating Webapp  in "_path
+		Set tApp = ##class(Security.Applications).%New()
+		Set tApp.Path = path
+		Set tApp.Name = webapp
+		Set tApp.AutheEnabled = 64
+		Set tApp.AutoCompile = 1
+		Set tApp.CookiePath = webapp_"/"
+		Set tApp.CSPZENEnabled = 1
+		Set tApp.DeepSeeEnabled = 1
+		Set tApp.Description = "Samples application"
+		Set tApp.Enabled = 1
+		Set tApp.ErrorPage = webapp_"/error.csp"
+		Set tApp.iKnowEnabled = 0
+		Set tApp.InbndWebServicesEnabled = 1
+		Set tApp.IsNameSpaceDefault = 1
+		Set tApp.LockCSPName = 1
+		Set tApp.NameSpace = tItem
+		Set tApp.Recurse = 1
+		Set tApp.ServeFiles = 1
+		Set tApp.ServeFilesTimeout = 3600
+		Set tApp.Timeout = 3600
+		Set tApp.UseCookies = 2
+		Set tApp.Type = 2
+		Set tSC = tApp.%Save()
+		Quit:'(tSC) "ERROR: Failed to create webapp "_webapp_" :"_$system.Status.GetErrorText(tSC)
+	}
+	ZN ns
+	///If BI already exists ask what to do
+	Set repogit = "Samples-BI"
+	If ##class(%Dictionary.ClassDefinition).%ExistsId("BI.Populate") {
+	  	Write !,"  * BI classes already installed. Do you want to reinstall "_repogit_"? [Y/N]"
+	  	Read choice
+	  	Set choice = $S($zu(28,choice,5)="Y":0, 1:1)
+	  	Write:choice !,"  * Quit"
+	  	Quit:choice
+  	}	
+	///Download from git. To do this, create temporary DDLConfigs
+	//parse url to get filename, server, path
+	Set ISgit = "https://github.com/intersystems/"
+	Set zipgit = "/archive/master.zip"
+	Set pLink = ISgit_repogit_zipgit
+	Set file = $P(pLink,"/",*)
+	If '##class(%File).Exists(tMgrDir_file)	{
+		Write !,"  * Downloading "_repogit_" from git"
+		Set pLink=$e(pLink,$find(pLink,"https://"),*)
+		Set pLink = $zstrip(pLink,"<>W")		
+		Set tFirstSlash = $find(pLink,"/")
+		Set tServer = $e(pLink,1,tFirstSlash-2)
+		Set tPath = $e(pLink,tFirstSlash-1,*)
+		//Create SLLConfigs
+		Write !,?4_"Creating temporary SLLConfigs"
+		Set st=##class(Security.SSLConfigs).Create("Temp")
+		Set conf=##class(Security.SSLConfigs).%OpenId("Temp")
+		Set conf.VerifyPeer=0
+		// send the HTTP request for the data
+		Write !,?4_"Sending HttpRequest"
+		Set tRequest = ##class(%Net.HttpRequest).%New()
+		Set tRequest.SSLConfiguration="Temp"		
+		Set tRequest.Server = tServer
+		Set tSC = tRequest.Get(tPath)
+
+		//If I want to download more I'd have to modularize everything in this If statement..
+		//Set tPath = "https://github.com/intersystems/Samples-Analytics-Clients/blob/master/HTML/test3rdPartyCharts.html"
+		//Set tPath = "https://github.com/intersystems/Samples-Analytics-Clients/blob/master/HTML/testDataController.html"
+		
+		//Delete SSLConfigs
+		Write !,?4,"Deleting temporary SLLConfigs"
+		Set st=##class(Security.SSLConfigs).Delete("Temp")
+		//Check tRequest
+		Quit:'tSC $System.Status.DisplayError(tSC)
+		If tRequest.HttpResponse.StatusCode '= 200 {
+			Quit "ERROR: HttpResponse failed the download on "_tServer_tPath_" with StatusCode: "_
+			 	tRequest.HttpResponse.StatusCode_" "_tRequest.HttpResponse.ReasonPhrase
+		}
+		//Write on stream file on disk
+		Write !,?4,"Writing downloaded file to "_tMgrDir_file
+		Set fs=##class(%Stream.FileBinary).%New()
+		Set fs.Filename=tMgrDir_file
+		//loop through the tRequest.HttpResponse.Data stream and write it to filestream fs
+		While 'tRequest.HttpResponse.Data.AtEnd {
+			Do fs.Write(tRequest.HttpResponse.Data.Read())
+		}
+		Set tSC = fs.%Save()
+		Quit:'(tSC) "ERROR: Failed to download "_tServer_tPath_" :"_$system.Status.GetErrorText(tSC)
+	} Else {
+		Write !,"  * Git repository already present in "_tMgrDir_file
+	}
+	/// Get the unzipped directory
+	Set unzippedDir = ""
+	If repogit = "Samples-BI" {
+	  	Set unzippedDir = tMgrDir_"Samples-BI-master"
+  	} Else {
+	  	Quit:'(tSC) "TODO: implement other repos"
+	}
+  	/// Decompress the zip
+	If '##class(%File).DirectoryExists(unzippedDir) {
+		Write !,"  * Unzipping "_tMgrDir_file_" to "_tMgrDir
+		Set isWINDOWS = $zversion(1)=2
+		Set isUNIX = $zversion(1)=3
+		Set out = 1 //out = 0 means unzipping succeded
+		Set:(tUnzipCommand="" && isUNIX) tUnzipCommand = "unzip -o "_tMgrDir_file //_" -d "_tMgrDir
+  		Set:(tUnzipCommand="" && isWINDOWS) tUnzipCommand = "jar.exe xf "_tMgrDir_file
+  		Set out = $zf(-1, tUnzipCommand) //0 is goed
+		While out {
+ 			Write:out !,?4_"ERROR: Failed to unzip with: "_tUnzipCommand
+  			If out {
+		  		Write !,?4,"Could not extract the "_tMgrDir_file_" file with this command:"
+		  		Write !,?4,tUnzipCommand
+		  		Write !,?4,"Three options: Extract the zip manually to "_unzippedDir_" then press enter;"
+		  		Write !,?19,"Type the full command to extract the zip;"
+		  		Write !,?19,"Type Quit",!,?4
+		  		Read input
+	  			If $zu(28,input,5)="QUIT" {
+		  			Quit
+		  			//Return "ERROR: Failed to unzip "_tMgrDir_file_" . Please unzip it in the /mgr folder and run again this script"
+	  			} ElseIf input='"" {
+		  			Set out = 0
+					//This works from windows
+					//""C:\Program Files\Java\jdk-9.0.4\bin\jar.exe"" xf C:\Users\amarin\Desktop\test.zip
+				} Else {
+					Set tUnzipCommand = input
+					Set out = $zf(-1, tUnzipCommand)
+					h 1
+					Quit:'out
+				}
+			}
+		}
+	}	
+	If '##class(%File).DirectoryExists(unzippedDir) {
+		Quit "ERROR: Cannot find the unzipped repo at "_tMgrDir_file_". Please unzip it in the /mgr folder and run again this script"
+	}
+	
+  	///Install the samples
+  	Write !,"  * Installing "_repogit  	
+  	do $system.OBJ.Load(unzippedDir_"/buildsample/buildsamplebi.mac","ck")
+	do run^buildsamplebi(unzippedDir_"/",1) 	//not sure final / is needed
+  	
+  	///Remove zip and folder
+  	If ##class(%File).Exists(tMgrDir_file)	{  		
+  		Write !,"  * Removing "_tMgrDir_file
+  		Set tSC = ##class(%Library.File).Delete(tMgrDir_file)
+		Quit:'(tSC) "ERROR: Failed to remove the zip file "_tMgrDir_file
+  	}
+	If ##class(%File).DirectoryExists(unzippedDir) {
+		Write !,"  * Removing "_unzippedDir
+  		Set tSC = ##class(%Library.File).RemoveDirectoryTree(unzippedDir)
+		Quit:'(tSC) "ERROR: Failed to remove the extracted directory "_unzippedDir
+  	}
+	Quit 1
+}
