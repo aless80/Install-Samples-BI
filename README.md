@@ -27,4 +27,4 @@ The argument for the InstallSamplesBI routine are optional. The default *namespa
 
 
 ### Limitations
-This routine is not officially supported by InterSystems Co. I suggest using this routine only in test environments.
+This routine is **not officially supported by InterSystems Co.** I suggest using this routine only in test environments.
