@@ -12,11 +12,16 @@ This routine automates the whole installation process. It will install the names
 * The user running the routinne should have privileges for the operations.  
 
 ### Instructions
-#### Programmatic import from Caché console
+
+Clone this repository or manually download and extract the zip file.  
+Import InstallSamplesBI.mac from Atelier, Studio, or from terminal as follows:  
 ```
-Set path="/home/amarin/Install-Samples-BI"  //Set your path
+Set path="/home/amarin/Install-Samples-BI/"  //Set your path
 W $system.OBJ.Load(path_"InstallSamplesBI.mac","cf")  //import the mac routine
-Do ^InstallSamplesBI(<*namespace*>,<*command to unzip*>)
+```
+Launch the routine from terminal:
+```
+Do ^InstallSamplesBI(<namespace>,<command to unzip>)
 ```
 The argument for the InstallSamplesBI routine are optional. The default *namespace* is "SAMPLES" and *command to unzip* is the command in your OS to unzip a zip file. The routine will try using "jar.exe xf" or "unzip -o" in Windows/Unix. If that does not work a prompt will instruct the user to unzip the ropository file
 
