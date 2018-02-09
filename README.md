@@ -17,7 +17,7 @@ Clone this repository or manually download and extract the zip file.
 Import InstallSamplesBI.mac from Atelier, Studio, or from terminal as follows:  
 ```
 Set path="/home/amarin/Install-Samples-BI/"  //Set your path
-W $system.OBJ.Load(path_"InstallSamplesBI.mac","cf")  //import the mac routine
+W $system.OBJ.Load(path_"InstallSamplesBI.mac","cf")
 ```
 Launch the routine from terminal:
 ```
