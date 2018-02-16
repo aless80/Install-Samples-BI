@@ -157,6 +157,7 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
 	}
 	
   	///Install the samples
+	ZN ns
   	Write !,"  * Installing "_repogit  	
   	do $system.OBJ.Load(unzippedDir_"/buildsample/buildsamplebi.mac","ck")
 	do run^buildsamplebi(unzippedDir_"/",1) 	//not sure final / is needed
