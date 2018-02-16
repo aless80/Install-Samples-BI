@@ -103,6 +103,7 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
 	
 	///The following code is for the Samples-BI repo. Yes, it could go in a separate procedure
 	Set file = $P(pLink,"/",*)
+	Set st = 1
 	If ##class(%File).Exists(tMgrDir_file)	{
 		Write !,"  * Git repository already present in "_tMgrDir_file
 	} Else {
