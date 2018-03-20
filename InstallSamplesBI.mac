@@ -1,4 +1,6 @@
-ROUTINE InstallSamplesBI
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+<Routine name="InstallSamplesBI" type="MAC" languagemode="0"><![CDATA[
 /// This routine install the Intersystems github repositories Samples-BI and Samples-Analytics-Clients. 
 /// <var>ns</var> is the namespace (default SAMPLES). If namespace does not exist it will be created 
 /// together with the webapp, unjournaled databases, and a temporary SSLConfigs. The repositories will 
@@ -103,19 +105,20 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
 	
 	///The following code is for the Samples-BI repo. Yes, it could go in a separate procedure
 	Set file = $P(pLink,"/",*)
-	Set st = 1
 	If ##class(%File).Exists(tMgrDir_file)	{
 		Write !,"  * Git repository already present in "_tMgrDir_file
 	} Else {
+		//Download from git
 		Write !,"  * Downloading "_repogit_" from git"
-		Set st=$$Download(pLink)
-	}
-	//Delete SSLConfigs
-	Write !,?4,"Deleting temporary SLLConfigs"
-	Set tSC=##class(Security.SSLConfigs).Delete("Temp")
-	//Check statuses
-	Quit:st'=1 st
-	Quit:'(tSC) tSC
+		Set tSC=$$Download(pLink)
+		W:'(tSC) !,$system.Status.GetErrorText(tSC)
+		Quit:'(tSC) tSC
+		//Delete SSLConfigs
+		Write !,?4,"Deleting temporary SLLConfigs"
+		Set tSC=##class(Security.SSLConfigs).Delete("Temp")		
+		W:'(tSC) !,$system.Status.GetErrorText(tSC)
+		Quit:'(tSC) tSC
+	}	
 	/// Get the unzipped directory
 	Set unzippedDir = ""
 	Set unzippedDir = tMgrDir_"Samples-BI-master"
@@ -214,3 +217,5 @@ Download(pLink) {
 	Quit:'(tSC) "ERROR: Failed to download "_tServer_tPath_" :"_$system.Status.GetErrorText(tSC)
 	Quit 1
 }
+]]></Routine>
+</Export>
