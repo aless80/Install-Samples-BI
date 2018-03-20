@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="25">
-<Routine name="InstallSamplesBI" type="MAC" languagemode="0"><![CDATA[
+<Export generator="Cache" version="25" zv="IRIS for UNIX (SUSE Linux Enterprise Server for x86-64) 2018.2 (Build 264U)" ts="2018-03-20 17:22:38">
+<Routine name="InstallSamplesBI" type="MAC" languagemode="0" timestamp="64727,62553.936924"><![CDATA[
 /// This routine install the Intersystems github repositories Samples-BI and Samples-Analytics-Clients. 
 /// <var>ns</var> is the namespace (default SAMPLES). If namespace does not exist it will be created 
 /// together with the webapp, unjournaled databases, and a temporary SSLConfigs. The repositories will 
@@ -163,9 +163,10 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
   	///Install the samples
 	ZN ns
   	Write !,"  * Installing "_repogit  	
-  	do $system.OBJ.Load(unzippedDir_"/buildsample/buildsamplebi.mac","ck")
-	do run^buildsamplebi(unzippedDir_"/",1) 	//not sure final / is needed
-  	
+  	//TODO: / vs \ ?
+  	do $system.OBJ.Load(unzippedDir_"/buildsample/Build.SampleBI.cls","ck")
+	do ##class(Build.BISample).run(unzippedDir_"/")
+
   	///Remove zip and folder
   	If ##class(%File).Exists(tMgrDir_file)	{  		
   		Write !,"  * Removing "_tMgrDir_file
