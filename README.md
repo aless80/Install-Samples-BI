@@ -2,7 +2,7 @@
 Automatically install SAMPLES in IRIS Data Platform
 
 ### Description
-In InterSystems' IRIS Data Platform the samples in the SAMPLES namespace are not available out of the box, but they are freelyavailable on github: [intersystems/Samples-BI](https://github.com/intersystems/Samples-BI).  
+In InterSystems' IRIS Data Platform the samples in the SAMPLES namespace are not available out of the box, but they are freely available on github: [intersystems/Samples-BI](https://github.com/intersystems/Samples-BI).  
 This routine automates the whole installation process. It will install the namespace, database, webapp, and a temporary "Temp" SSLConfigs. The [intersystems/Samples-BI](https://github.com/intersystems/Samples-BI) repository will be downloaded as zip file to the /mgr/ directory of the installation. This routine will try to automatically extract the zip file (see the instructions below). The installation routine from [intersystems/Samples-BI](https://github.com/intersystems/Samples-BI) will install the samples. Finally, this routine will remove zip file, extracted directory, and the "Temp" SSLConfigs.  
 
 ### Requirements
