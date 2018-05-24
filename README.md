@@ -23,7 +23,7 @@ Launch the routine from terminal:
 ```
 Do ^InstallSamplesBI(<namespace>,<command to unzip>)
 ```
-The argument for the InstallSamplesBI routine are optional. The default *namespace* is "SAMPLES" and *command to unzip* is the command in your OS to unzip a zip file. The routine will try using "jar.exe xf" or "unzip -o" in Windows/Unix. If that does not work a prompt will instruct the user to unzip the ropository file
+The argument for the InstallSamplesBI routine are optional. The default *namespace* is "SAMPLES" and *command to unzip* is the command in your OS to unzip a zip file. The routine will try using "jar.exe xf" or "unzip -o" in Windows/Unix. If that does not work a prompt will instruct the user to unzip the repository file
 
 
 ### Limitations
