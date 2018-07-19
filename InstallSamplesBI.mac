@@ -12,6 +12,9 @@
 InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "") 
 {
 	zn "%SYS"
+	Set isWINDOWS = $zversion(1)=2
+	Set isUNIX = $zversion(1)=3
+	Set slash =$S(isWINDOWS:"\",1:"/")
 	Set tItem = $zu(28,ns,5)
 	Set tMgrDir = ##class(%File).ManagerDirectory()
 	//Check if the namespace already exists. If not create DB and ns in a new directory
@@ -46,21 +49,21 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
 	 }
 	///Create a web application. 
 	///Assume webapp is (when choosing SAMPLES) /csp/samples in /mgr/csp/samples/ directory
-	Set webapp = "/csp/"_$zcvt(tItem,"L") 				//eg /csp/samples
+	Set webapp = slash_"csp"_slash_$zcvt(tItem,"L") 				//eg /csp/samples
 	If '##class(Security.Applications).Exists(webapp) {	//eg <install>/mgr/csp/samples/
-		Set path = $System.Util.InstallDirectory()_webapp_"/"
+		Set path = $System.Util.InstallDirectory()_webapp_slash
 		Write !,"  * Creating Webapp  in "_path
 		Set tApp = ##class(Security.Applications).%New()
 		Set tApp.Path = path
 		Set tApp.Name = webapp
 		Set tApp.AutheEnabled = 64
 		Set tApp.AutoCompile = 1
-		Set tApp.CookiePath = webapp_"/"
+		Set tApp.CookiePath = webapp_slash
 		Set tApp.CSPZENEnabled = 1
 		Set tApp.DeepSeeEnabled = 1
 		Set tApp.Description = "Samples application"
 		Set tApp.Enabled = 1
-		Set tApp.ErrorPage = webapp_"/error.csp"
+		Set tApp.ErrorPage = webapp_slash_"error.csp"
 		Set tApp.iKnowEnabled = 0
 		Set tApp.InbndWebServicesEnabled = 1
 		Set tApp.IsNameSpaceDefault = 1
@@ -73,7 +76,8 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
 		Set tApp.UseCookies = 2
 		Set tApp.Type = 2
 		Set tSC = tApp.%Save()
-		Quit:'(tSC) "ERROR: Failed to create webapp "_webapp_" :"_$system.Status.GetErrorText(tSC)
+		Write:'(tSC) !,"ERROR: Failed to create webapp "_webapp_" :"_$system.Status.GetErrorText(tSC)
+		Quit:'(tSC)
 	}
 
 	///If BI already exists ask what to do
@@ -96,11 +100,9 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
 		// test3rdPartyCharts.html , testDataController.html
 		Set pLink = "https://github.com/intersystems/"_repogit_"/archive/master.zip" 
 		Set pLink = "https://github.com/intersystems/"_repogit_"/archive/master.zip"
-		//move to /home/amarin/intersystems/iris20182/csp/samples		
-		//Set st=##class(%Library.File).CopyFile(tMgrDir_file,"/home/amarin/intersystems/iris20182/csp/samples/",1)
-		Quit "TODO!"
+		Quit "Not implemented!"
 	} Else {
-		Quit "TODO"
+		Quit "Not implemented"
 	}
 	
 	///The following code is for the Samples-BI repo. Yes, it could go in a separate procedure
@@ -111,12 +113,12 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
 		//Download from git
 		Write !,"  * Downloading "_repogit_" from git"
 		Set tSC=$$Download(pLink)
-		W:'(tSC) !,$system.Status.GetErrorText(tSC)
+		Write:'(tSC) !,$system.Status.GetErrorText(tSC)
 		Quit:'(tSC) tSC
 		//Delete SSLConfigs
 		Write !,?4,"Deleting temporary SLLConfigs"
 		Set tSC=##class(Security.SSLConfigs).Delete("Temp")		
-		W:'(tSC) !,$system.Status.GetErrorText(tSC)
+		Write:'(tSC) !,$system.Status.GetErrorText(tSC)
 		Quit:'(tSC) tSC
 	}	
 	/// Get the unzipped directory
@@ -125,8 +127,6 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
   	/// Decompress the zip
 	If '##class(%File).DirectoryExists(unzippedDir) {
 		Write !,"  * Unzipping "_tMgrDir_file_" to "_tMgrDir
-		Set isWINDOWS = $zversion(1)=2
-		Set isUNIX = $zversion(1)=3
 		Set out = 1 //out = 0 means unzipping succeded
 		Set:(tUnzipCommand="" && isUNIX) tUnzipCommand = "unzip -o "_tMgrDir_file //_" -d "_tMgrDir
   		Set:(tUnzipCommand="" && isWINDOWS) tUnzipCommand = "jar.exe xf "_tMgrDir_file
@@ -157,26 +157,29 @@ InstallSamplesBI(ns = "SAMPLES", tUnzipCommand = "")
 		}
 	}	
 	If '##class(%File).DirectoryExists(unzippedDir) {
-		Quit "ERROR: Cannot find the unzipped repo at "_tMgrDir_file_". Please unzip it in the /mgr folder and run again this script"
+		Write !,"ERROR: Cannot find the unzipped repo at "_tMgrDir_file_". Please unzip it in the mgr folder and run again this script" 
+		Quit 
 	}
 	
   	///Install the samples
 	ZN ns
   	Write !,"  * Installing "_repogit  	
-  	//TODO: / vs \ ?
-  	do $system.OBJ.Load(unzippedDir_"/buildsample/Build.SampleBI.cls","ck")
-	do ##class(Build.BISample).run(unzippedDir_"/")
+  	do $system.OBJ.Load(unzippedDir_slash_"buildsample"_slash_"Build.SampleBI.cls","ck")
+  	Write !,"do $system.OBJ.Load("_unzippedDir_slash_"buildsample"_slash_"Build.SampleBI.cls"",""ck"")"
+	do ##class(Build.BISample).run(unzippedDir_slash)
 
   	///Remove zip and folder
   	If ##class(%File).Exists(tMgrDir_file)	{  		
   		Write !,"  * Removing "_tMgrDir_file
   		Set tSC = ##class(%Library.File).Delete(tMgrDir_file)
-		Quit:'(tSC) "ERROR: Failed to remove the zip file "_tMgrDir_file
+		Write:'(tSC) !,"ERROR: Failed to remove the zip file "_tMgrDir_file
+		Quit:'(tSC) 
   	}
 	If ##class(%File).DirectoryExists(unzippedDir) {
 		Write !,"  * Removing "_unzippedDir
   		Set tSC = ##class(%Library.File).RemoveDirectoryTree(unzippedDir)
-		Quit:'(tSC) "ERROR: Failed to remove the extracted directory "_unzippedDir
+		Write:'(tSC) "ERROR: Failed to remove the extracted directory "_unzippedDir
+		Quit:'(tSC)
   	}
 	Quit 1
 }
@@ -203,8 +206,9 @@ Download(pLink) {
 	//Check tRequest
 	Quit:'tSC $System.Status.DisplayError(tSC)
 	If tRequest.HttpResponse.StatusCode '= 200 {
-		Quit "ERROR: HttpResponse failed the download on "_tServer_tPath_" with StatusCode: "_
+		Write "ERROR: HttpResponse failed the download on "_tServer_tPath_" with StatusCode: "_
 		 	tRequest.HttpResponse.StatusCode_" "_tRequest.HttpResponse.ReasonPhrase
+		Quit
 	}
 	//Write on stream file on disk
 	Write !,?4,"Writing downloaded file to "_tMgrDir_file
@@ -215,7 +219,8 @@ Download(pLink) {
 		Do fs.Write(tRequest.HttpResponse.Data.Read())
 	}
 	Set tSC = fs.%Save()
-	Quit:'(tSC) "ERROR: Failed to download "_tServer_tPath_" :"_$system.Status.GetErrorText(tSC)
+	Write:'(tSC) "ERROR: Failed to download "_tServer_tPath_" :"_$system.Status.GetErrorText(tSC)
+	Quit:'(tSC)
 	Quit 1
 }
 ]]></Routine>
